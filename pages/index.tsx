@@ -1,7 +1,7 @@
 import React from "react";
 import Head from "next/head";
 import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
-import LogInLogo from "./LogInLogo";
+import LogInLogo from "../components/LogInLogo";
 
 const IndexPage = () => (
   <>
@@ -11,17 +11,22 @@ const IndexPage = () => (
         content="minimum-scale=1, initial-scale=1, width=device-width"
       />
     </Head>
-    <Container maxWidth="sm">
-      <Box my={4}>
+    <Container maxWidth="xs">
+      <Box 
+      display="flex"
+      position="relative"
+      flexDirection="column"
+      justifyContent="space-between"
+      height="100vh"
+      py={3}
+      >
         <Typography
-          variant="h1"
-          component="h1"
-          gutterBottom
-          style={{
-            width: "263px",
-            height: "336px",
-            left: "24px",
-            top: "30px",
+           variant="h1"
+           component="h1"
+           gutterBottom
+           style={{
+             width: "263px",
+             height: "336px",
           }}
         >
           Your To Do List
@@ -36,7 +41,7 @@ const IndexPage = () => (
             position: "absolute",
           }}
         >
-          <LogInLogo />
+          <LogInLogo style={{ position: "fixed" }}/>
         </Icon>
 
         <TextField
@@ -46,13 +51,6 @@ const IndexPage = () => (
           type="email"
           variant="filled"
           fullWidth
-          style={{
-            position: "absolute",
-            left: "6.4%",
-            right: "6.13%",
-            top: "86.96%",
-            bottom: "4.65%",
-          }}
         />
       </Box>
     </Container>

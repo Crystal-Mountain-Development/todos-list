@@ -1,7 +1,8 @@
-import React from "react";
+import React, {FC} from "react";
 
-const Login = () => (
+const Login: FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
+  {...props}
     width="285"
     height="253"
     viewBox="0 0 285 253"

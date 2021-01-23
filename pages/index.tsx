@@ -1,12 +1,39 @@
 import React, { useCallback } from "react";
 import Head from "next/head";
-import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
+import { Box, Container, TextField, Typography, Icon, Input } from "@material-ui/core";
 import LogInLogo from "../components/LogInLogo";
+import {ApolloClient, gql, InMemoryCache,useMutation} from "@apollo/client";
 
 const IndexPage = () => {
   const onSubmit = useCallback((e) => {
     e.preventDefault();
-    console.log(e);
+
+    //work here
+let emailinput
+
+const SENDAUTHTOKEN = gql`mutation SendAuthToken($type: String!){
+  sendAuthToken(type:$type){
+    message
+  token
+  }
+}
+`;
+
+const client = new ApolloClient({
+  uri: "http://localhost:4000/",
+  cache: new InMemoryCache()
+})
+
+client.mutate({
+mutation: SENDAUTHTOKEN,
+variables: {email: emailinput}
+})
+.then((respons)=>console.log(respons.data))
+
+
+
+    //work here
+    console.log(TextField);
   }, []);
 
   return (
@@ -51,6 +78,7 @@ const IndexPage = () => {
           </Icon>
           <form onSubmit={onSubmit}>
             <TextField
+            value={this.state.textField}
               id="filled-basic"
               label="Email"
               placeholder="example@email.com"

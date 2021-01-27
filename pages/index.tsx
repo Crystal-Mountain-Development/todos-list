@@ -1,39 +1,41 @@
 import React, { useCallback } from "react";
 import Head from "next/head";
-import { Box, Container, TextField, Typography, Icon, Input } from "@material-ui/core";
+import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
 import LogInLogo from "../components/LogInLogo";
-import {ApolloClient, gql, InMemoryCache,useMutation} from "@apollo/client";
+import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
+import Router from "next/router";
+
+let userEmail: string;
 
 const IndexPage = () => {
   const onSubmit = useCallback((e) => {
     e.preventDefault();
 
-    //work here
-let emailinput
+    if (!userEmail) {
+      return;
+    }
 
-const SENDAUTHTOKEN = gql`mutation SendAuthToken($type: String!){
-  sendAuthToken(type:$type){
-    message
-  token
-  }
-}
-`;
+    const SENDAUTHTOKEN = gql`
+      mutation SendAuthToken($email: String!) {
+        sendAuthToken(email: $email) {
+          message
+          token
+        }
+      }
+    `;
 
-const client = new ApolloClient({
-  uri: "http://localhost:4000/",
-  cache: new InMemoryCache()
-})
+    const client = new ApolloClient({
+      uri: "http://localhost:4000/",
+      cache: new InMemoryCache(),
+    });
 
-client.mutate({
-mutation: SENDAUTHTOKEN,
-variables: {email: emailinput}
-})
-.then((respons)=>console.log(respons.data))
-
-
-
-    //work here
-    console.log(TextField);
+    client
+      .mutate({
+        mutation: SENDAUTHTOKEN,
+        variables: { email: userEmail },
+      })
+      .then(() => Router.push("/authentication"))
+      .catch(() => Router.push("/signin"));
   }, []);
 
   return (
@@ -78,7 +80,7 @@ variables: {email: emailinput}
           </Icon>
           <form onSubmit={onSubmit}>
             <TextField
-            value={this.state.textField}
+              onChange={(e) => (userEmail = e.target.value)}
               id="filled-basic"
               label="Email"
               placeholder="example@email.com"

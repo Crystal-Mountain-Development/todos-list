@@ -2,8 +2,8 @@ import React, { useCallback, useState } from "react";
 import Head from "next/head";
 import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
 import LogInLogo from "../components/LogInLogo";
-import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
-import Router from "next/router";
+import { gql, useMutation } from "@apollo/client";
+import { useRouter } from "next/router";
 
 const SEND_AUTH_TOKEN = gql`
   mutation SendAuthToken($email: String!) {
@@ -14,13 +14,10 @@ const SEND_AUTH_TOKEN = gql`
   }
 `;
 
-const client = new ApolloClient({
-  uri: "http://localhost:4000/",
-  cache: new InMemoryCache(),
-});
-
 const IndexPage = () => {
+  const router = useRouter();
   const [userEmail, setMail] = useState("");
+  const [verifyUser] = useMutation(SEND_AUTH_TOKEN);
 
   const onSubmit = useCallback(
     (e) => {
@@ -28,13 +25,14 @@ const IndexPage = () => {
 
       if (!userEmail) return;
 
-      client
-        .mutate({
-          mutation: SEND_AUTH_TOKEN,
-          variables: { email: userEmail },
-        })
-        .then(() => Router.push("/auth"))
-        .catch(() => Router.push("/signin"));
+      (async function () {
+        try {
+          await verifyUser({ variables: { email: userEmail } });
+          router.push("/auth");
+        } catch {
+          router.push("/signin");
+        }
+      })();
     },
     [userEmail]
   );

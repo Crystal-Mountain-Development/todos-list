@@ -1,41 +1,46 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import Head from "next/head";
 import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
 import LogInLogo from "../components/LogInLogo";
 import { ApolloClient, gql, InMemoryCache } from "@apollo/client";
 import Router from "next/router";
 
-let userEmail: string;
+const SEND_AUTH_TOKEN = gql`
+  mutation SendAuthToken($email: String!) {
+    sendAuthToken(email: $email) {
+      message
+      token
+    }
+  }
+`;
+
+const client = new ApolloClient({
+  uri: "http://localhost:4000/",
+  cache: new InMemoryCache(),
+});
 
 const IndexPage = () => {
-  const onSubmit = useCallback((e) => {
-    e.preventDefault();
+  const [userEmail, setMail] = useState("");
 
-    if (!userEmail) {
-      return;
-    }
+  const onSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    const SENDAUTHTOKEN = gql`
-      mutation SendAuthToken($email: String!) {
-        sendAuthToken(email: $email) {
-          message
-          token
-        }
-      }
-    `;
+      if (!userEmail) return;
 
-    const client = new ApolloClient({
-      uri: "http://localhost:4000/",
-      cache: new InMemoryCache(),
-    });
+      client
+        .mutate({
+          mutation: SEND_AUTH_TOKEN,
+          variables: { email: userEmail },
+        })
+        .then(() => Router.push("/auth"))
+        .catch(() => Router.push("/signin"));
+    },
+    [userEmail]
+  );
 
-    client
-      .mutate({
-        mutation: SENDAUTHTOKEN,
-        variables: { email: userEmail },
-      })
-      .then(() => Router.push("/authentication"))
-      .catch(() => Router.push("/signin"));
+  const onChange = useCallback((e) => {
+    setMail(e.target.value);
   }, []);
 
   return (
@@ -80,7 +85,8 @@ const IndexPage = () => {
           </Icon>
           <form onSubmit={onSubmit}>
             <TextField
-              onChange={(e) => (userEmail = e.target.value)}
+              value={userEmail}
+              onChange={onChange}
               id="filled-basic"
               label="Email"
               placeholder="example@email.com"

@@ -51,7 +51,10 @@ const IndexPage = () => {
         await addUser({
           variables: { email: userEmail, username: userName },
         });
-        router.push("/auth");
+        router.push({
+          pathname: "/auth",
+          query: { email: encodeURI(userEmail),isRegister: false },
+        });
       } catch (e) {
         if (e.message == "Already have a account") {
           setMessageErrorName("");

@@ -19,6 +19,7 @@ import {
 import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
 import AuthLogo from "../../components/AuthLogo";
+import clippy from "use-clippy";
 
 const SIGNIN = gql`
   mutation emailValidation($email: String!, $token: String!) {
@@ -65,24 +66,26 @@ const IndexPage = () => {
   const [inputToken, setInputToken] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogText, setDialogText] = useState("");
+  const [disableFetch, setDisableFetch] = useState(false);
 
   const [login] = useMutation(LOGIN);
   const [verifyEmail] = useMutation(SIGNIN);
   const [sendSignToken] = useMutation(SEND_SIGNIN_TOKEN);
   const [sendLoginToken] = useMutation(SEND_LOGIN_TOKEN);
+  const [clipboard] = clippy();
 
   const isTokenCorrect = useMemo(() => {
     return inputToken.length === 6;
   }, [inputToken]);
 
   const verification = useCallback(() => {
-    //if is new user
-    if (router.query.isRegister==="true") {
+    if (router.query.isRegister === "true") {
       verificationLogIn();
       return;
     }
 
     try {
+      setDisableFetch(true);
       const userEmail = router.query.email;
       (async function () {
         try {
@@ -94,6 +97,8 @@ const IndexPage = () => {
           dialogMessage(e.message);
           handleClickOpen();
           clean();
+        } finally {
+          setDisableFetch(false);
         }
       })();
     } catch {
@@ -103,11 +108,11 @@ const IndexPage = () => {
   }, [inputToken]);
 
   const verificationLogIn = useCallback(() => {
-    //if is old user
     try {
       const userEmail = router.query.email;
       (async function () {
         try {
+          setDisableFetch(true);
           await login({
             variables: { email: userEmail, token: inputToken },
           });
@@ -116,6 +121,8 @@ const IndexPage = () => {
           dialogMessage(e.message);
           handleClickOpen();
           clean();
+        } finally {
+          setDisableFetch(false);
         }
       })();
     } catch {
@@ -125,7 +132,7 @@ const IndexPage = () => {
   }, [inputToken]);
 
   const ReSendToken = useCallback(() => {
-    if (router.query.isRegister==="true") {
+    if (router.query.isRegister === "true") {
       SendLogToken();
       return;
     }
@@ -133,6 +140,7 @@ const IndexPage = () => {
     const userEmail = router.query.email;
     (async function () {
       try {
+        setDisableFetch(true);
         await sendSignToken({
           variables: { email: userEmail },
         });
@@ -142,23 +150,28 @@ const IndexPage = () => {
       } catch {
         dialogMessage("Fail to re-send the token, please try again");
         handleClickOpen();
+      } finally {
+        setDisableFetch(false);
       }
     })();
-  }, []);
+  }, [clipboard]);
 
   const SendLogToken = useCallback(() => {
     const userEmail = router.query.email;
     (async function () {
       try {
+        setDisableFetch(true);
         await sendLoginToken({
           variables: { email: userEmail },
         });
-        dialogMessage("The token has be resented again");
+        dialogMessage("Token has be resented again");
         handleClickOpen();
         timeout();
       } catch {
         dialogMessage("Fail to re-send the token, please try again");
         handleClickOpen();
+      } finally {
+        setDisableFetch(false);
       }
     })();
   }, []);
@@ -202,6 +215,13 @@ const IndexPage = () => {
         .join("")
     );
   }, []);
+
+  const isTokenInClipboard = useCallback(() => {
+    if (clipboard.length != 6) return;
+    for (let i = 0; i < 6; i++) {
+      inputTokenRefs.current[i].value = clipboard.split("")[i];
+    }
+  }, [clipboard]);
 
   const timeout = useCallback(() => {
     setIsButtonEnable(true);
@@ -272,6 +292,7 @@ const IndexPage = () => {
               justifyContent="center"
             >
               <TextField
+                onFocus={isTokenInClipboard}
                 onInput={onInputTokens}
                 onKeyDown={onKeyDownNext}
                 inputRef={(ref) => (inputTokenRefs.current[0] = ref)}
@@ -362,7 +383,7 @@ const IndexPage = () => {
               />
             </Box>
             <Button
-              disabled={isButtonEnable}
+              disabled={isButtonEnable || disableFetch}
               onClick={ReSendToken}
               type="submit"
               variant="text"
@@ -388,7 +409,7 @@ const IndexPage = () => {
 
           <Box mt={25}>
             <Button
-              disabled={!isTokenCorrect}
+              disabled={!isTokenCorrect || disableFetch}
               onClick={verification}
               type="submit"
               variant="contained"

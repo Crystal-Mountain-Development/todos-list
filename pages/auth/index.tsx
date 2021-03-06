@@ -4,6 +4,7 @@ import React, {
   useRef,
   useState,
   KeyboardEvent,
+  useEffect,
 } from "react";
 import Head from "next/head";
 import {
@@ -19,7 +20,6 @@ import {
 import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
 import AuthLogo from "../../components/AuthLogo";
-import clippy from "use-clippy";
 
 const SIGNIN = gql`
   mutation emailValidation($email: String!, $token: String!) {
@@ -57,124 +57,103 @@ const LOGIN = gql`
 
 const IndexPage = () => {
   const router = useRouter();
+  const { email, isRegister: isRegisterQuery } = router.query;
+  const isRegister = isRegisterQuery !== "false";
 
   const inputTokenRefs = useRef<(HTMLInputElement | null)[]>(
     new Array(6).fill(null)
   );
 
-  const [isButtonEnable, setIsButtonEnable] = useState(false);
+  const [isButtonEnable, setIsButtonEnable] = useState(true);
   const [inputToken, setInputToken] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogText, setDialogText] = useState("");
-  const [disableFetch, setDisableFetch] = useState(false);
+  const [clipboard, setClipboard] = useState("");
 
-  const [login] = useMutation(LOGIN);
-  const [verifyEmail] = useMutation(SIGNIN);
-  const [sendSignToken] = useMutation(SEND_SIGNIN_TOKEN);
-  const [sendLoginToken] = useMutation(SEND_LOGIN_TOKEN);
-  const [clipboard] = clippy();
+  const [login, { loading: loginLoading }] = useMutation(LOGIN);
+  const [verifyEmail, { loading: verifyEmailLoading }] = useMutation(SIGNIN);
+  const [sendSignToken, { loading: sendSignTokenLoading }] = useMutation(
+    SEND_SIGNIN_TOKEN
+  );
+  const [sendLoginToken, { loading: sendLoginTokenLoading }] = useMutation(
+    SEND_LOGIN_TOKEN
+  );
+  const fetching =
+    loginLoading ||
+    verifyEmailLoading ||
+    sendSignTokenLoading ||
+    sendLoginTokenLoading;
 
   const isTokenCorrect = useMemo(() => {
     return inputToken.length === 6;
   }, [inputToken]);
 
-  const verification = useCallback(() => {
-    if (router.query.isRegister === "true") {
-      verificationLogIn();
-      return;
-    }
-
-    try {
-      setDisableFetch(true);
-      const userEmail = router.query.email;
-      (async function () {
-        try {
-          await verifyEmail({
-            variables: { email: userEmail, token: inputToken },
-          });
-          router.push("/lists");
-        } catch (e) {
-          dialogMessage(e.message);
-          handleClickOpen();
-          clean();
-        } finally {
-          setDisableFetch(false);
-        }
-      })();
-    } catch {
-      dialogMessage("Fail to verify token, please try in 5 minutes");
-      handleClickOpen();
-    }
-  }, [inputToken]);
-
-  const verificationLogIn = useCallback(() => {
-    try {
-      const userEmail = router.query.email;
-      (async function () {
-        try {
-          setDisableFetch(true);
-          await login({
-            variables: { email: userEmail, token: inputToken },
-          });
-          router.push("/lists");
-        } catch (e) {
-          dialogMessage(e.message);
-          handleClickOpen();
-          clean();
-        } finally {
-          setDisableFetch(false);
-        }
-      })();
-    } catch {
-      dialogMessage("Fail to verify token, please try in 5 minutes");
-      handleClickOpen();
-    }
-  }, [inputToken]);
-
-  const ReSendToken = useCallback(() => {
-    if (router.query.isRegister === "true") {
-      SendLogToken();
-      return;
-    }
-
-    const userEmail = router.query.email;
+  const loginHandler = useCallback(() => {
     (async function () {
       try {
-        setDisableFetch(true);
-        await sendSignToken({
-          variables: { email: userEmail },
+        await login({
+          variables: { email, token: inputToken },
         });
-        dialogMessage("The token has be resented again");
-        handleClickOpen();
-        timeout();
-      } catch {
-        dialogMessage("Fail to re-send the token, please try again");
-        handleClickOpen();
-      } finally {
-        setDisableFetch(false);
+        router.push("/lists");
+      } catch (e) {
+        setDialogText(e.message);
+        cleanToken();
       }
     })();
-  }, [clipboard]);
+  }, [inputToken, email]);
 
-  const SendLogToken = useCallback(() => {
-    const userEmail = router.query.email;
+  const verifyEmailHandler = useCallback(() => {
     (async function () {
       try {
-        setDisableFetch(true);
-        await sendLoginToken({
-          variables: { email: userEmail },
+        await verifyEmail({
+          variables: { email, token: inputToken },
         });
-        dialogMessage("Token has be resented again");
-        handleClickOpen();
-        timeout();
-      } catch {
-        dialogMessage("Fail to re-send the token, please try again");
-        handleClickOpen();
-      } finally {
-        setDisableFetch(false);
+        router.push("/lists");
+      } catch (e) {
+        setDialogText(e.message);
+        cleanToken();
       }
     })();
-  }, []);
+  }, [inputToken, email]);
+
+  const onVerification = useCallback(() => {
+    if (isRegister) loginHandler();
+    else verifyEmailHandler();
+  }, [loginHandler, verifyEmailHandler]);
+
+  const sendLoginTokenHandler = useCallback(() => {
+    (async function () {
+      try {
+        await sendLoginToken({ variables: { email } });
+        setDialogText("Token has be resented again");
+        cooldownButton();
+      } catch {
+        setDialogText("Fail to re-send the token, please try again");
+      }
+    })();
+  }, [isRegister, email]);
+
+  const sendSignTokenHandler = useCallback(() => {
+    (async function () {
+      try {
+        await sendSignToken({ variables: { email } });
+        setDialogText("The token has be resented again");
+        cooldownButton();
+      } catch {
+        setDialogText("Fail to re-send the token, please try again");
+      }
+    })();
+  }, [clipboard, isRegister, email]);
+
+  const onResentToken = useCallback(() => {
+    if (isRegister) sendLoginTokenHandler();
+    else sendSignTokenHandler();
+  }, [sendLoginTokenHandler, sendSignTokenHandler]);
+
+  const getInputTokenIndex = useCallback(
+    (ref: HTMLInputElement) =>
+      inputTokenRefs.current.findIndex((x) => x === ref),
+    [inputTokenRefs]
+  );
 
   const onKeyDownNext = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     const { key } = e;
@@ -182,28 +161,26 @@ const IndexPage = () => {
 
     if (e.key === "Backspace") {
       target.value = "";
-      const IndexOfKey = inputTokenRefs.current.findIndex(
-        (x) => x === e.target
-      );
-      inputTokenRefs.current[IndexOfKey - 1]?.focus();
+      const index = getInputTokenIndex(target);
+      inputTokenRefs.current[index - 1]?.focus();
     }
 
     if (/\d/.test(e.key)) {
-      const IndexOfKey = inputTokenRefs.current.findIndex(
-        (x) => x === e.target
-      );
+      const index = getInputTokenIndex(target);
       target.value = key;
-      inputTokenRefs.current[IndexOfKey + 1]?.focus();
+      inputTokenRefs.current[index + 1]?.focus();
     }
+
     onInputTokens();
     e.preventDefault();
   }, []);
 
-  const clean = useCallback(() => {
+  const cleanToken = useCallback(() => {
     inputTokenRefs.current.forEach((x) => {
       if (!x) return;
       x.value = "";
     });
+    onInputTokens();
   }, []);
 
   const onInputTokens = useCallback(() => {
@@ -216,31 +193,35 @@ const IndexPage = () => {
     );
   }, []);
 
-  const isTokenInClipboard = useCallback(() => {
-    if (clipboard.length != 6) return;
-    for (let i = 0; i < 6; i++) {
-      inputTokenRefs.current[i].value = clipboard.split("")[i];
-    }
-  }, [clipboard]);
-
-  const timeout = useCallback(() => {
-    setIsButtonEnable(true);
+  const cooldownButton = useCallback(() => {
+    setIsButtonEnable(false);
     setTimeout(function () {
-      setIsButtonEnable(false);
+      setIsButtonEnable(true);
     }, 1000 * 25);
   }, []);
 
-  const handleClickOpen = useCallback(() => {
-    setDialogOpen(true);
+  const onCloseDialog = useCallback(() => {
+    setDialogText("");
   }, []);
 
-  const handleClickClose = useCallback(() => {
-    setDialogOpen(false);
+  useEffect(() => {
+    async function updateClipboard() {
+      setClipboard(await navigator.clipboard.readText());
+    }
+    window.addEventListener("focus", updateClipboard);
+
+    return () => window.removeEventListener("focus", updateClipboard);
   }, []);
 
-  const dialogMessage = useCallback((t) => {
-    setDialogText(t);
-  }, []);
+  useEffect(() => {
+    if (clipboard.length != 6) return;
+    const clipboardChars = clipboard.split("");
+    inputTokenRefs.current.forEach((currentInputToken, i) => {
+      if (!currentInputToken) return;
+      currentInputToken.value = clipboardChars[i];
+    });
+    onInputTokens();
+  }, [clipboard]);
 
   return (
     <>
@@ -291,100 +272,28 @@ const IndexPage = () => {
               flexDirection="row"
               justifyContent="center"
             >
-              <TextField
-                onFocus={isTokenInClipboard}
-                onInput={onInputTokens}
-                onKeyDown={onKeyDownNext}
-                inputRef={(ref) => (inputTokenRefs.current[0] = ref)}
-                id="token-one"
-                name="user-email"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
-
-              <TextField
-                onInput={onInputTokens}
-                inputRef={(ref) => (inputTokenRefs.current[1] = ref)}
-                onKeyDown={onKeyDownNext}
-                id="token-two"
-                name="user-name"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
-
-              <TextField
-                onInput={onInputTokens}
-                onKeyDown={onKeyDownNext}
-                inputRef={(ref) => (inputTokenRefs.current[2] = ref)}
-                id="token-three"
-                name="user-email"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
-
-              <TextField
-                onInput={onInputTokens}
-                onKeyDown={onKeyDownNext}
-                inputRef={(ref) => (inputTokenRefs.current[3] = ref)}
-                id="token-four"
-                name="user-name"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
-
-              <TextField
-                onInput={onInputTokens}
-                onKeyDown={onKeyDownNext}
-                inputRef={(ref) => (inputTokenRefs.current[4] = ref)}
-                id="token-five"
-                name="user-email"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
-
-              <TextField
-                onInput={onInputTokens}
-                onKeyDown={onKeyDownNext}
-                inputRef={(ref) => (inputTokenRefs.current[5] = ref)}
-                id="token-six"
-                name="user-name"
-                variant="filled"
-                margin="dense"
-                inputProps={{ maxLength: 1 }}
-                style={{
-                  width: 43,
-                  marginLeft: 14,
-                }}
-              />
+              {inputTokenRefs.current.map((_, i) => {
+                return (
+                  <TextField
+                    key={i}
+                    onInput={onInputTokens}
+                    onKeyDown={onKeyDownNext}
+                    inputRef={(ref) => (inputTokenRefs.current[i] = ref)}
+                    id={`token-${i}`}
+                    variant="filled"
+                    margin="dense"
+                    inputProps={{ maxLength: 1 }}
+                    style={{
+                      width: 43,
+                      marginLeft: 14,
+                    }}
+                  />
+                );
+              })}
             </Box>
             <Button
-              disabled={isButtonEnable || disableFetch}
-              onClick={ReSendToken}
+              disabled={!isButtonEnable || fetching}
+              onClick={onResentToken}
               type="submit"
               variant="text"
               color="primary"
@@ -393,11 +302,11 @@ const IndexPage = () => {
             >
               RESEND THE TOKEN
             </Button>
-            <Dialog open={dialogOpen} onClose={handleClickClose}>
+            <Dialog open={Boolean(dialogText)} onClose={onCloseDialog}>
               <DialogTitle>{dialogText}</DialogTitle>
               <DialogActions>
                 <Button
-                  onClick={handleClickClose}
+                  onClick={onCloseDialog}
                   color="primary"
                   variant="contained"
                 >
@@ -409,8 +318,8 @@ const IndexPage = () => {
 
           <Box mt={25}>
             <Button
-              disabled={!isTokenCorrect || disableFetch}
-              onClick={verification}
+              disabled={!isTokenCorrect || fetching}
+              onClick={onVerification}
               type="submit"
               variant="contained"
               color="primary"

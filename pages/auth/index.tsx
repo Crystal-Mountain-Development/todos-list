@@ -21,7 +21,7 @@ import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
 import AuthLogo from "../../components/AuthLogo";
 
-const SIGNIN = gql`
+const EMAIL_VALIDATION = gql`
   mutation emailValidation($email: String!, $token: String!) {
     emailValidation(email: $email, token: $token) {
       authorization
@@ -29,7 +29,7 @@ const SIGNIN = gql`
   }
 `;
 
-const SEND_SIGNIN_TOKEN = gql`
+const RESEND_EMAIL_VALIDATION = gql`
   mutation resendEmailValidation($email: String!) {
     resendEmailValidation(email: $email) {
       message
@@ -38,7 +38,7 @@ const SEND_SIGNIN_TOKEN = gql`
   }
 `;
 
-const SEND_LOGIN_TOKEN = gql`
+const SEND_AUTH_TOKEN = gql`
   mutation sendAuthToken($email: String!) {
     sendAuthToken(email: $email) {
       message
@@ -70,12 +70,12 @@ const IndexPage = () => {
   const [clipboard, setClipboard] = useState("");
 
   const [login, { loading: loginLoading }] = useMutation(LOGIN);
-  const [verifyEmail, { loading: verifyEmailLoading }] = useMutation(SIGNIN);
-  const [sendSignToken, { loading: sendSignTokenLoading }] = useMutation(
-    SEND_SIGNIN_TOKEN
+  const [emailValidation, { loading: verifyEmailLoading }] = useMutation(EMAIL_VALIDATION);
+  const [resendEmailValidation, { loading: sendSignTokenLoading }] = useMutation(
+    RESEND_EMAIL_VALIDATION
   );
-  const [sendLoginToken, { loading: sendLoginTokenLoading }] = useMutation(
-    SEND_LOGIN_TOKEN
+  const [sendAuthToken, { loading: sendLoginTokenLoading }] = useMutation(
+    SEND_AUTH_TOKEN
   );
   const fetching =
     loginLoading ||
@@ -104,7 +104,7 @@ const IndexPage = () => {
   const verifyEmailHandler = useCallback(() => {
     (async function () {
       try {
-        await verifyEmail({
+        await emailValidation({
           variables: { email, token: inputToken },
         });
         router.push("/lists");
@@ -123,7 +123,7 @@ const IndexPage = () => {
   const sendLoginTokenHandler = useCallback(() => {
     (async function () {
       try {
-        await sendLoginToken({ variables: { email } });
+        await sendAuthToken({ variables: { email } });
         setDialogText("Token has be resented again");
         cooldownButton();
       } catch {
@@ -135,7 +135,7 @@ const IndexPage = () => {
   const sendSignTokenHandler = useCallback(() => {
     (async function () {
       try {
-        await sendSignToken({ variables: { email } });
+        await resendEmailValidation({ variables: { email } });
         setDialogText("The token has be resented again");
         cooldownButton();
       } catch {

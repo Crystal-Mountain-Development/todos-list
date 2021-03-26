@@ -28,7 +28,10 @@ const IndexPage = () => {
       (async function () {
         try {
           await verifyUser({ variables: { email: userEmail } });
-          router.push("/auth");
+          router.push({
+            pathname: "/auth",
+            query: { email: encodeURI(userEmail), isRegister: true },
+          });
         } catch {
           router.push("/signin");
         }

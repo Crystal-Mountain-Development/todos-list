@@ -1,0 +1,5 @@
+mutation emailValidation($email: String!, $token: String!) {
+  emailValidation(email: $email, token: $token) {
+    authorization
+  }
+}

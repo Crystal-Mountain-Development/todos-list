@@ -11,6 +11,7 @@ import {
   Drawer,
   List,
   ListItem,
+  Divider,
 } from "@material-ui/core";
 import { useRouter } from "next/router";
 
@@ -18,6 +19,7 @@ import ListsLogo from "../../components/ListsLogo";
 import SeachIcon from "../../components/SeachIcon";
 import MenuIcon from "../../components/MenuIcon";
 import AddIcon from "../../components/AddIcon";
+import ListIcon from "../../components/ListIcon";
 import { GetServerSideProps } from "next";
 import { useMyListQuery } from "../../generated/graphql";
 import { getServerPageMyList } from "../../generated/nextSSR";
@@ -25,16 +27,22 @@ import { initializeApollo } from "../../apollo/client";
 
 const IndexPage = () => {
   const { data } = useMyListQuery();
+  console.log("🚀 ~ file: index.tsx ~ line 30 ~ IndexPage ~ data :=", data?.lists)
   const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
 
   const onClickMenuOpen = useCallback(() => {
-    setDrawerOpen(true);
+    setDrawerOpen(true);          
   }, []);
   const onClickMenuClose = useCallback(() => {
     setDrawerOpen(false);
   }, []);
 
+/*
+problem: if someone don't have list, they don't enter in the map
+solutions? : fill with dummy data the first entry, [0], that allow to use .map
+where? : in api (preferably), if not in list
+*/
   return (
     <>
       <Head>
@@ -55,13 +63,36 @@ const IndexPage = () => {
             <Button onClick={() => router.push("/")}>{"< Back"}</Button>
           </Box>
 
-          <Box margin="auto">
-            <ListsLogo />
-            <Typography variant="h5" component="h5" align="center">
-              No list found
-            </Typography>
-          </Box>
+          <Box marginBottom="auto">
 
+            {data?.lists.map((x, i) => {
+              if (i === 0) {
+                return (
+                  <Box margin="auto">
+                    <ListsLogo />
+                    <Typography variant="h5" component="h5" align="center">
+                      No list found
+                    </Typography>
+                  </Box>
+                );
+              }
+              return (
+                <Box display="flex" flexDirection="column" marginRight="auto">
+                  <Typography variant="h6" component="h6">
+                    {x.title}
+                  </Typography>
+                  <Box display="flex" marginLeft="auto">
+                    <ListIcon />
+                  </Box>
+                  <Typography variant="h6" component="h6">
+                   {x.isComplete?"Complete":"Incomplete"}
+                  </Typography>
+                  <Divider />
+                </Box>
+              );
+            })}
+            
+          </Box>
           <Box>
             <BottomNavigation>
               <BottomNavigationAction

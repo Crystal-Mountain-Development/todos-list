@@ -14,6 +14,12 @@ import {
   Divider,
   AppBar,
   Portal,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
 } from "@material-ui/core";
 import { useRouter } from "next/router";
 
@@ -26,12 +32,39 @@ import { GetServerSideProps } from "next";
 import { useMyListQuery } from "../../generated/graphql";
 import { getServerPageMyList } from "../../generated/nextSSR";
 import { initializeApollo } from "../../apollo/client";
+import { useAddListMutation } from "../../generated/graphql";
 
 const IndexPage = () => {
   const { data } = useMyListQuery();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
   const appBarPortalContainer = useRef(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [addList] = useAddListMutation();
+  const [listName, setListName] = useState("new list");
+  const [dialogText, setDialogText] = useState("");
+
+  const onAddList = useCallback(() => {
+    (async function () {
+      try {
+        await addList({
+          variables: { title: listName },
+        });
+        router.reload();
+      } catch (e) {
+        setDialogText(
+          e.message === "Failed to fetch"
+            ? "We have problems with the connection, please try again in 5 minutes"
+            : e.message
+        );
+      }
+    })();
+    onClickDialogClose();
+  }, [listName]);
+
+  const onChangeListName = useCallback((e) => {
+    setListName(e.target.value);
+  }, []);
 
   const onClickMenuOpen = useCallback(() => {
     setDrawerOpen(true);
@@ -40,11 +73,17 @@ const IndexPage = () => {
     setDrawerOpen(false);
   }, []);
 
-  /*
-    problem: if someone don't have list, they don't enter in the map
-    solutions? : fill with dummy data the first entry, [0], that allow to use .map
-    where? : in api (preferably), if not in list
-  */
+  const onClickDialogOpen = useCallback(() => {
+    setDialogOpen(true);
+  }, []);
+  const onClickDialogClose = useCallback(() => {
+    setDialogOpen(false);
+  }, []);
+
+  const onCloseDialog = useCallback(() => {
+    setDialogText("");
+  }, []);
+
   return (
     <>
       <Head>
@@ -115,7 +154,7 @@ const IndexPage = () => {
                   icon={<SeachIcon />}
                   onClick={onClickMenuOpen}
                 />
-                <Fab color="primary">
+                <Fab color="primary" onClick={onClickDialogOpen}>
                   <AddIcon />
                 </Fab>
                 <BottomNavigationAction
@@ -126,6 +165,49 @@ const IndexPage = () => {
               </BottomNavigation>
             </AppBar>
           </Portal>
+
+          <Dialog
+            open={dialogOpen}
+            onClose={onClickDialogClose}
+            aria-labelledby="form-dialog-title"
+          >
+            <DialogTitle id="form-dialog-title">New list</DialogTitle>
+            <DialogContent>
+              <DialogContentText>Name of the new list</DialogContentText>
+              <TextField
+                autoFocus
+                margin="dense"
+                id="name"
+                label="List name"
+                type="text"
+                fullWidth
+                value={listName}
+                onChange={onChangeListName}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={onClickDialogClose} color="primary">
+                Cancel
+              </Button>
+              <Button onClick={onAddList} color="primary">
+                Create
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={Boolean(dialogText)} onClose={onCloseDialog}>
+            <DialogTitle>{dialogText}</DialogTitle>
+            <DialogActions>
+              <Button
+                onClick={onCloseDialog}
+                color="primary"
+                variant="contained"
+              >
+                Got it
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Drawer
             open={drawerOpen}
             onClose={onClickMenuClose}

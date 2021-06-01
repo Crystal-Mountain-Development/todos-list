@@ -202,6 +202,19 @@ export type UserUpdateInput = {
   email?: Maybe<Scalars['String']>;
 };
 
+export type AddListMutationVariables = Exact<{
+  title: Scalars['String'];
+}>;
+
+
+export type AddListMutation = (
+  { __typename?: 'Mutation' }
+  & { addList: (
+    { __typename?: 'List' }
+    & Pick<List, 'title' | 'isComplete'>
+  ) }
+);
+
 export type EmailValidationMutationVariables = Exact<{
   email: Scalars['String'];
   token: Scalars['String'];
@@ -294,6 +307,14 @@ export type SigninMutation = (
   )> }
 );
 
+export const AddListDocument = gql`
+    mutation addList($title: String!) {
+  addList(insert: {title: $title}) {
+    title
+    isComplete
+  }
+}
+    `;
 export const EmailValidationDocument = gql`
     mutation emailValidation($email: String!, $token: String!) {
   emailValidation(email: $email, token: $token) {

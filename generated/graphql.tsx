@@ -198,6 +198,19 @@ export type UserUpdateInput = {
   email?: Maybe<Scalars['String']>;
 };
 
+export type AddListMutationVariables = Exact<{
+  title: Scalars['String'];
+}>;
+
+
+export type AddListMutation = (
+  { __typename?: 'Mutation' }
+  & { addList: (
+    { __typename?: 'List' }
+    & Pick<List, 'title' | 'isComplete'>
+  ) }
+);
+
 export type EmailValidationMutationVariables = Exact<{
   email: Scalars['String'];
   token: Scalars['String'];
@@ -291,6 +304,40 @@ export type SigninMutation = (
 );
 
 
+export const AddListDocument = gql`
+    mutation addList($title: String!) {
+  addList(insert: {title: $title}) {
+    title
+    isComplete
+  }
+}
+    `;
+export type AddListMutationFn = Apollo.MutationFunction<AddListMutation, AddListMutationVariables>;
+
+/**
+ * __useAddListMutation__
+ *
+ * To run a mutation, you first call `useAddListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addListMutation, { data, loading, error }] = useAddListMutation({
+ *   variables: {
+ *      title: // value for 'title'
+ *   },
+ * });
+ */
+export function useAddListMutation(baseOptions?: Apollo.MutationHookOptions<AddListMutation, AddListMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddListMutation, AddListMutationVariables>(AddListDocument, options);
+      }
+export type AddListMutationHookResult = ReturnType<typeof useAddListMutation>;
+export type AddListMutationResult = Apollo.MutationResult<AddListMutation>;
+export type AddListMutationOptions = Apollo.BaseMutationOptions<AddListMutation, AddListMutationVariables>;
 export const EmailValidationDocument = gql`
     mutation emailValidation($email: String!, $token: String!) {
   emailValidation(email: $email, token: $token) {

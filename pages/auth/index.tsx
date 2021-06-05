@@ -17,47 +17,19 @@ import {
   DialogTitle,
   DialogActions,
 } from "@material-ui/core";
-import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
 import AuthLogo from "../../components/AuthLogo";
-
-const EMAIL_VALIDATION = gql`
-  mutation emailValidation($email: String!, $token: String!) {
-    emailValidation(email: $email, token: $token) {
-      authorization
-    }
-  }
-`;
-
-const RESEND_EMAIL_VALIDATION = gql`
-  mutation resendEmailValidation($email: String!) {
-    resendEmailValidation(email: $email) {
-      message
-      token
-    }
-  }
-`;
-
-const SEND_AUTH_TOKEN = gql`
-  mutation sendAuthToken($email: String!) {
-    sendAuthToken(email: $email) {
-      message
-      token
-    }
-  }
-`;
-
-const LOGIN = gql`
-  mutation login($email: String!, $token: String!) {
-    login(email: $email, token: $token) {
-      authorization
-    }
-  }
-`;
+import {
+  useEmailValidationMutation,
+  useLoginMutation,
+  useResendEmailValidationMutation,
+  useSendAuthTokenMutation,
+} from "../../generated/graphql";
 
 const IndexPage = () => {
   const router = useRouter();
-  const { email, isRegister: isRegisterQuery } = router.query;
+  const { email: emailQuery, isRegister: isRegisterQuery } = router.query;
+  const email = Array.isArray(emailQuery) ? emailQuery.join("") : emailQuery;
   const isRegister = isRegisterQuery !== "false";
 
   const inputTokenRefs = useRef<(HTMLInputElement | null)[]>(
@@ -69,14 +41,19 @@ const IndexPage = () => {
   const [dialogText, setDialogText] = useState("");
   const [clipboard, setClipboard] = useState("");
 
-  const [login, { loading: loginLoading }] = useMutation(LOGIN);
-  const [emailValidation, { loading: verifyEmailLoading }] = useMutation(EMAIL_VALIDATION);
-  const [resendEmailValidation, { loading: sendSignTokenLoading }] = useMutation(
-    RESEND_EMAIL_VALIDATION
-  );
-  const [sendAuthToken, { loading: sendLoginTokenLoading }] = useMutation(
-    SEND_AUTH_TOKEN
-  );
+  const [login, { loading: loginLoading }] = useLoginMutation();
+  const [
+    emailValidation,
+    { loading: verifyEmailLoading },
+  ] = useEmailValidationMutation();
+  const [
+    resendEmailValidation,
+    { loading: sendSignTokenLoading },
+  ] = useResendEmailValidationMutation();
+  const [
+    sendAuthToken,
+    { loading: sendLoginTokenLoading },
+  ] = useSendAuthTokenMutation();
   const fetching =
     loginLoading ||
     verifyEmailLoading ||
@@ -90,9 +67,21 @@ const IndexPage = () => {
   const loginHandler = useCallback(() => {
     (async function () {
       try {
-        await login({
-          variables: { email, token: inputToken },
+        const res = await login({
+          variables: {
+            email: email,
+            token: inputToken,
+          },
         });
+
+        if (!res.data?.login?.authorization) {
+          setDialogText("Something went wrong");
+          cleanToken();
+
+          return;
+        }
+
+        localStorage.setItem("token", res.data.login.authorization);
         router.push("/lists");
       } catch (e) {
         setDialogText(e.message);
@@ -136,6 +125,7 @@ const IndexPage = () => {
     (async function () {
       try {
         await resendEmailValidation({ variables: { email } });
+
         setDialogText("The token has be resented again");
         cooldownButton();
       } catch {

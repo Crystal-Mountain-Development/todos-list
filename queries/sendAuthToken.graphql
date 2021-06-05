@@ -1,0 +1,6 @@
+mutation sendAuthToken($email: String!) {
+  sendAuthToken(email: $email) {
+    message
+    token
+  }
+}

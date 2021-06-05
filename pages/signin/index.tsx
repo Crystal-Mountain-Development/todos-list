@@ -9,17 +9,8 @@ import {
   createStyles,
   makeStyles,
 } from "@material-ui/core";
-import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
-
-const SEND_SIGN_TOKEN = gql`
-  mutation signin($email: String!, $username: String!) {
-    signin(email: $email, username: $username) {
-      message
-      token
-    }
-  }
-`;
+import { useSigninMutation } from "../../generated/graphql";
 
 const useStyles = makeStyles(() =>
   createStyles({
@@ -43,7 +34,7 @@ const IndexPage = () => {
     return userEmail && userName && IS_EMAIL_REGEX.test(userEmail);
   }, [userEmail, userName]);
 
-  const [addUser] = useMutation(SEND_SIGN_TOKEN);
+  const [addUser] = useSigninMutation();
 
   const onSignIn = useCallback(() => {
     (async function () {
@@ -53,7 +44,7 @@ const IndexPage = () => {
         });
         router.push({
           pathname: "/auth",
-          query: { email: encodeURI(userEmail),isRegister: false },
+          query: { email: encodeURI(userEmail), isRegister: false },
         });
       } catch (e) {
         if (e.message == "Already have a account") {
@@ -144,6 +135,7 @@ const IndexPage = () => {
                   fullWidth
                 />
               </Box>
+
               <Button
                 disabled={!ableToSignIn}
                 onSubmit={onSubmit}

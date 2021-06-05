@@ -1,0 +1,6 @@
+mutation resendEmailValidation($email: String!) {
+  resendEmailValidation(email: $email) {
+    message
+    token
+  }
+}

@@ -1,0 +1,7 @@
+query myList {
+  lists {
+    id
+    isComplete
+    title
+  }
+}

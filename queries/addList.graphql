@@ -1,0 +1,6 @@
+mutation addList($title:String!){
+  addList(insert:{title:$title}){
+    title
+    isComplete
+  }
+}

@@ -1,23 +1,30 @@
 import React, { useCallback, useState } from "react";
 import Head from "next/head";
-import { Box, Container, TextField, Typography, Icon } from "@material-ui/core";
+import {
+  Box,
+  Container,
+  TextField,
+  Typography,
+  Icon,
+  Button,
+} from "@material-ui/core";
 import LogInLogo from "../components/LogInLogo";
-import { gql, useMutation } from "@apollo/client";
 import { useRouter } from "next/router";
-
-const SEND_AUTH_TOKEN = gql`
-  mutation SendAuthToken($email: String!) {
-    sendAuthToken(email: $email) {
-      message
-      token
-    }
-  }
-`;
+import {
+  GoogleLogin,
+  GoogleLoginResponse,
+  GoogleLoginResponseOffline,
+} from "react-google-login";
+import {
+  useGoogleEmailValidationMutation,
+  useSendAuthTokenMutation,
+} from "../generated/graphql";
 
 const IndexPage = () => {
   const router = useRouter();
   const [userEmail, setMail] = useState("");
-  const [verifyUser] = useMutation(SEND_AUTH_TOKEN);
+  const [verifyUser] = useSendAuthTokenMutation();
+  const [googleEmailValidation] = useGoogleEmailValidationMutation();
 
   const onSubmit = useCallback(
     (e) => {
@@ -39,6 +46,35 @@ const IndexPage = () => {
     },
     [userEmail]
   );
+
+  const onGoogleAuthSuccess = (
+    res: GoogleLoginResponse | GoogleLoginResponseOffline
+  ) => {
+    (async function () {
+      const onlineRes = res as GoogleLoginResponse;
+      const offlineRes = res as GoogleLoginResponseOffline;
+
+      if (!onlineRes.profileObj) {
+        console.error(offlineRes.code);
+        return;
+      }
+
+      try {
+        await googleEmailValidation({
+          variables: {
+            token: onlineRes.tokenObj.id_token,
+          },
+        });
+        router.push({ pathname: "/lists" });
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  };
+
+  const onGoogleAuthFailure = () => {
+    // TODO: Add Error
+  };
 
   const onChange = useCallback((e) => {
     setMail(e.target.value);
@@ -82,17 +118,37 @@ const IndexPage = () => {
           >
             <LogInLogo style={{ position: "fixed" }} />
           </Icon>
+
           <form onSubmit={onSubmit}>
-            <TextField
-              value={userEmail}
-              onChange={onChange}
-              id="filled-basic"
-              label="Email"
-              placeholder="example@email.com"
-              type="email"
-              variant="filled"
-              fullWidth
+            <GoogleLogin
+              clientId={process.env.NEXT_PUBLIC_GOOGLE_AUTH_PUBLIC || ""}
+              onSuccess={onGoogleAuthSuccess}
+              onFailure={onGoogleAuthFailure}
+              cookiePolicy={"single_host_origin"}
+              render={(props) => (
+                <Button
+                  {...props}
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  fullWidth
+                >
+                  Sign up with Google
+                </Button>
+              )}
             />
+            <Box pt={"10px"}>
+              <TextField
+                value={userEmail}
+                onChange={onChange}
+                id="filled-basic"
+                label="Email"
+                placeholder="example@email.com"
+                type="email"
+                variant="filled"
+                fullWidth
+              />
+            </Box>
           </form>
         </Box>
       </Container>

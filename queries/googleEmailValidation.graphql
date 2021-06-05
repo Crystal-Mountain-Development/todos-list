@@ -1,0 +1,5 @@
+mutation googleEmailValidation($token: String!) {
+  googleEmailValidation(token: $token) {
+    authorization
+  }
+}

@@ -20,6 +20,7 @@ import {
   DialogContentText,
   DialogTitle,
   TextField,
+  Link,
 } from "@material-ui/core";
 import { useRouter } from "next/router";
 
@@ -35,7 +36,7 @@ import { initializeApollo } from "../../apollo/client";
 import { useAddListMutation } from "../../generated/graphql";
 
 const IndexPage = () => {
-  const { data } = useMyListQuery();
+  const { data, refetch: refetchMyList } = useMyListQuery();
   const router = useRouter();
   const appBarPortalContainer = useRef(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,7 +51,7 @@ const IndexPage = () => {
         await addList({
           variables: { title: listName },
         });
-        router.reload();
+        refetchMyList();
       } catch (e) {
         setDialogText(
           e.message === "Failed to fetch"
@@ -128,7 +129,9 @@ const IndexPage = () => {
                     justifyContent="center"
                     flex="1 1 auto"
                   >
-                    <Typography variant="subtitle1">{title}</Typography>
+                    <Link href={`/list/${id}`}>
+                      <Typography variant="subtitle1">{title}</Typography>
+                    </Link>
                     <Typography variant="body2" color="textSecondary">
                       {isComplete ? "Complete" : "Incomplete"}
                     </Typography>

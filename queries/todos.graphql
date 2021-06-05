@@ -1,0 +1,12 @@
+query todos($listId: Int!) {
+  list(id: $listId) {
+    id
+    title
+    isComplete
+    todos {
+      id
+      isComplete
+      summary
+    }
+  }
+}

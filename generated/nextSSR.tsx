@@ -215,6 +215,20 @@ export type AddListMutation = (
   ) }
 );
 
+export type AddTodoMutationVariables = Exact<{
+  summary: Scalars['String'];
+  listId: Scalars['Int'];
+}>;
+
+
+export type AddTodoMutation = (
+  { __typename?: 'Mutation' }
+  & { addTodo: (
+    { __typename?: 'Todo' }
+    & Pick<Todo, 'id' | 'summary'>
+  ) }
+);
+
 export type EmailValidationMutationVariables = Exact<{
   email: Scalars['String'];
   token: Scalars['String'];
@@ -307,11 +321,51 @@ export type SigninMutation = (
   )> }
 );
 
+export type TodosQueryVariables = Exact<{
+  listId: Scalars['Int'];
+}>;
+
+
+export type TodosQuery = (
+  { __typename?: 'Query' }
+  & { list: (
+    { __typename?: 'List' }
+    & Pick<List, 'id' | 'title' | 'isComplete'>
+    & { todos: Array<(
+      { __typename?: 'Todo' }
+      & Pick<Todo, 'id' | 'isComplete' | 'summary'>
+    )> }
+  ) }
+);
+
+export type UpdateTodoMutationVariables = Exact<{
+  id: Scalars['String'];
+  summary: Scalars['String'];
+  status?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateTodoMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTodo: (
+    { __typename?: 'Todo' }
+    & Pick<Todo, 'id' | 'summary' | 'isComplete'>
+  ) }
+);
+
 export const AddListDocument = gql`
     mutation addList($title: String!) {
   addList(insert: {title: $title}) {
     title
     isComplete
+  }
+}
+    `;
+export const AddTodoDocument = gql`
+    mutation addTodo($summary: String!, $listId: Int!) {
+  addTodo(insert: {summary: $summary, listId: $listId}) {
+    id
+    summary
   }
 }
     `;
@@ -395,6 +449,58 @@ export const SigninDocument = gql`
   signin(email: $email, username: $username) {
     message
     token
+  }
+}
+    `;
+export const TodosDocument = gql`
+    query todos($listId: Int!) {
+  list(id: $listId) {
+    id
+    title
+    isComplete
+    todos {
+      id
+      isComplete
+      summary
+    }
+  }
+}
+    `;
+export async function getServerPageTodos
+    (options: Omit<Apollo.QueryOptions<TodosQueryVariables>, 'query'>, apolloClient: Apollo.ApolloClient<NormalizedCacheObject> ){
+        
+        
+        const data = await apolloClient.query<TodosQuery>({ ...options, query: TodosDocument });
+        
+        const apolloState = apolloClient.cache.extract();
+
+        return {
+            props: {
+                apolloState: apolloState,
+                data: data?.data,
+                error: data?.error ?? data?.errors ?? null,
+            },
+        };
+      }
+export type PageTodosComp = React.FC<{data?: TodosQuery, error?: Apollo.ApolloError}>;
+export const withPageTodos = (optionsFunc?: (router: NextRouter)=> QueryHookOptions<TodosQuery, TodosQueryVariables>) => (WrappedComponent:PageTodosComp) : NextPage  => (props) => {
+                const router = useRouter()
+                const options = optionsFunc ? optionsFunc(router) : {};
+                const {data, error } = useQuery(TodosDocument, options)    
+                return <WrappedComponent {...props} data={data} error={error} /> ;
+                   
+            }; 
+export const ssrTodos = {
+      getServerPage: getServerPageTodos,
+      withPage: withPageTodos,
+      
+    }
+export const UpdateTodoDocument = gql`
+    mutation updateTodo($id: String!, $summary: String!, $status: Boolean) {
+  updateTodo(id: $id, update: {summary: $summary, isComplete: $status}) {
+    id
+    summary
+    isComplete
   }
 }
     `;

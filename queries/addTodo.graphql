@@ -1,0 +1,6 @@
+mutation addTodo($summary: String!, $listId: Int!) {
+  addTodo(insert: { summary: $summary, listId: $listId }) {
+    id
+    summary
+  }
+}

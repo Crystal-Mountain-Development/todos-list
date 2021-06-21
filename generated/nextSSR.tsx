@@ -215,6 +215,20 @@ export type AddListMutation = (
   ) }
 );
 
+export type AddTodoMutationVariables = Exact<{
+  summary: Scalars['String'];
+  listId: Scalars['Int'];
+}>;
+
+
+export type AddTodoMutation = (
+  { __typename?: 'Mutation' }
+  & { addTodo: (
+    { __typename?: 'Todo' }
+    & Pick<Todo, 'id' | 'summary'>
+  ) }
+);
+
 export type EmailValidationMutationVariables = Exact<{
   email: Scalars['String'];
   token: Scalars['String'];
@@ -324,11 +338,34 @@ export type TodosQuery = (
   ) }
 );
 
+export type UpdateTodoMutationVariables = Exact<{
+  id: Scalars['String'];
+  summary: Scalars['String'];
+  status?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateTodoMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTodo: (
+    { __typename?: 'Todo' }
+    & Pick<Todo, 'id' | 'summary' | 'isComplete'>
+  ) }
+);
+
 export const AddListDocument = gql`
     mutation addList($title: String!) {
   addList(insert: {title: $title}) {
     title
     isComplete
+  }
+}
+    `;
+export const AddTodoDocument = gql`
+    mutation addTodo($summary: String!, $listId: Int!) {
+  addTodo(insert: {summary: $summary, listId: $listId}) {
+    id
+    summary
   }
 }
     `;
@@ -458,3 +495,12 @@ export const ssrTodos = {
       withPage: withPageTodos,
       
     }
+export const UpdateTodoDocument = gql`
+    mutation updateTodo($id: String!, $summary: String!, $status: Boolean) {
+  updateTodo(id: $id, update: {summary: $summary, isComplete: $status}) {
+    id
+    summary
+    isComplete
+  }
+}
+    `;
